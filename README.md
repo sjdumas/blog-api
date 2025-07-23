@@ -15,7 +15,7 @@ This project is a monorepo with three different apps in one repo. It contains th
 - [PostgreSQL](https://www.postgresql.org/)
 
 ### Frontend
-- [React](https://react.dev/) *(or Vanilla JS, depending on implementation)*
+- [React](https://react.dev/)
 - [Tailwind CSS](https://tailwindcss.com/)
 
 ### Authentication
