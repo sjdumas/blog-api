@@ -1,0 +1,28 @@
+{
+  "name": "blog-api",
+  "version": "1.0.0",
+  "description": "Blog API project for The Odin Project",
+  "license": "ISC",
+  "author": "S.J. Dumas",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/blog-api.git"
+  },
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.12.0",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^6.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

@@ -1,0 +1,30 @@
+# Root level
+.DS_Store
+.env
+*.log
+
+# Ignore all node_modules in the monorepo
+node_modules/
+
+# API Backend
+api-backend/node_modules/
+api-backend/.env
+api-backend/.env.*
+api-backend/prisma/dev.db
+api-backend/prisma/dev.db-journal
+
+# Reader Frontend
+reader-frontend/node_modules/
+reader-frontend/.env
+reader-frontend/.env.*
+
+# Admin Frontend
+admin-frontend/node_modules/
+admin-frontend/.env
+admin-frontend/.env.*
+
+# Build Output (for Vite/Next/React)
+*/dist/
+*/.next/
+*.cache
+`
