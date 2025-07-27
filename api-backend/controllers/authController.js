@@ -32,7 +32,7 @@ const signup = async (req, res) => {
 
 // Login controller
 const login = async (req, res) => {
-	const { email, passowrd } = req.body;
+	const { email, password } = req.body;
 
 	try {
 		const user = await prisma.user.findUnique({

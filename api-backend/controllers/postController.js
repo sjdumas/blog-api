@@ -32,9 +32,34 @@ const getPostById = async (req, res) => {
 	}
 };
 
+// Get a post by slug (and include post comments)
+const getPostBySlug = async (req, res) => {
+	const { slug } = req.params;
+
+	try {
+		const post = await prisma.post.findUnique({
+			where: { slug },
+			include: {
+				author: true,
+				comments: {
+					include: { author: true },
+				},
+			},
+		});
+
+		if (!post) {
+			return res.status(404).json({ error: "Post not found" });
+		}
+		res.json(post);
+	} catch (error) {
+		res.status(500).json({ error: "Error fetching post" });
+	}
+};
+
 // Create a new post
 const createPost = async (req, res) => {
-	const { title, content, slug, excerpt, published, authorId } = req.body;
+	const { title, content, slug, excerpt, published } = req.body;
+	const authorId = req.user.userId;
 
 	try {
 		const newPost = await prisma.post.create({
@@ -83,4 +108,11 @@ const deletePost = async (req, res) => {
 	}
 };
 
-module.exports = { getAllPosts, getPostById, createPost, updatePost, deletePost };
+module.exports = { 
+	getAllPosts, 
+	getPostById, 
+	getPostBySlug, 
+	createPost, 
+	updatePost, 
+	deletePost 
+};
