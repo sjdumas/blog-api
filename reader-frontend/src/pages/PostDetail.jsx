@@ -9,6 +9,9 @@ export default function PostDetail() {
 	const [comments, setComments] = useState([]);
 	const [error, setError] = useState("");
 	const [submitError, setSubmitError] = useState("");
+	const [successMessage, setSuccessMessage] = useState("");
+	const [errorMessage, setErrorMessage] = useState("");
+	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
 		const fetchPost = async () => {
@@ -29,6 +32,9 @@ export default function PostDetail() {
 	if (error) return <p>Error: {error}</p>
 	if (!post) return <p>Loading post...</p>
 
+	const wordCount = post.content?.split(" ").length || 0;
+	const readTime = Math.ceil(wordCount / 200);
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setSubmitError("");
@@ -40,12 +46,16 @@ export default function PostDetail() {
 			return;
 		}
 
+		if (!commentText.trim()) return;
+
+		setLoading(true);
+
 		try {
 			const response = await fetch("http://localhost:3000/api/comments", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: "Bearer ${token}",
+					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({
 					text: commentText,
@@ -59,6 +69,11 @@ export default function PostDetail() {
 
 			const newComment = await response.json();
 
+			setSuccessMessage("Your comment was posted!");
+			setTimeout(() => { 
+				setSuccessMessage("");
+			}, 3000); // Clear message after 3 seconds
+
 			// Clear the form
 			setCommentText("");
 
@@ -69,14 +84,27 @@ export default function PostDetail() {
 			}));
 		} catch (error) {
 			setSubmitError(error.message || "Something went wrong");
+			setErrorMessage("Failed to post comment. Please try again.");
+			setTimeout(() => {
+				setErrorMessage("");
+				setSuccessMessage("");
+			}, 3000); // Clear message after 3 seconds
+		} finally {
+			setLoading(false);
 		}
 	};
 
 	return (
 		<div className="post">
-			<h2>{post.title}</h2>
-			<p><strong>By:</strong> {post.author?.username}</p>
-			<p><strong>Published:</strong> {new Date(post.createdAt).toLocaleDateString()}</p>
+			<h2 className="text-2xl font-semibold mb-1">{post.title}</h2>
+			<div className="text-sm text-gray-500 mb-4">
+				By {post.author?.username || "Unknown"} ·{" "}
+				{new Date(post.createdAt).toLocaleDateString(undefined, {
+					year: "numeric",
+					month: "short",
+					day: "numeric",
+				})} · {readTime} min read
+			</div>
 			<p><strong>Excerpt:</strong> {post.excerpt}</p>
 			<div className="post-content">
 				<p>{post.content}</p>
@@ -90,12 +118,13 @@ export default function PostDetail() {
 					{comments.length > 0 ? (
 						<ul className="space-y-4">
 						{comments.map((comment) => (
-							<li key={comment.id} className="bg-gray-100 p-4 rounded-md">
-							<p className="text-gray-700">{comment.content}</p>
-								<p className="text-sm text-gray-500 mt-2">
-									— {comment.author?.username || "Anonymous"}
-								</p>
-							</li>
+							<div key={comment.id} className="mb-4 border-b pb-2">
+								<p className="text-gray-700">{comment.content}</p>
+								<div className="text-xs text-gray-500 mt-1">
+									{comment.author?.username || "Anonymous"} ·{" "}
+									{new Date(comment.createdAt).toLocaleString()}
+								</div>
+							</div>
 						))}
 						</ul>
 					) : (
@@ -115,11 +144,18 @@ export default function PostDetail() {
 					<button
 						type="submit"
 						className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+						disabled={loading}
 					>
-						Post Comment
+						{loading ? "Posting..." : "Post Comment"}
 					</button>
 					{submitError && (
 						<p className="text-red-500 text-sm">{submitError}</p>
+					)}
+					{successMessage && (
+						<div className="text-green-600 text-sm mb-2">{successMessage}</div>
+					)}
+					{errorMessage && (
+						<div className="text-red-600 text-sm mb-2">{errorMessage}</div>
 					)}
 				</form>
 			</div>
