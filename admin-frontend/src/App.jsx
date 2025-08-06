@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NewPost from "./pages/NewPost";
 import EditPost from "./pages/EditPost";
+import Comments from "./components/Comments";
 
 function App() {
 	return (
@@ -15,6 +16,7 @@ function App() {
 					<Route path="/login" element={<Login />} />
 					<Route path="/posts/new" element={<NewPost />} />
 					<Route path="/posts/:id/edit" element={<EditPost />} />
+					<Route path="/comments" element={<Comments />} />
 				</Routes>
 			</main>
 		</Router>

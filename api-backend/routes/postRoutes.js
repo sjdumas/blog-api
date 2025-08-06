@@ -12,5 +12,6 @@ router.get("/:slug", postController.getPostBySlug);
 router.post("/", verifyToken, postController.createPost);
 router.put("/:id", verifyToken, postController.updatePost);
 router.delete("/:id", verifyToken, postController.deletePost);
+router.patch("/:id/publish", verifyToken, postController.togglePublish);
 
 module.exports = router;

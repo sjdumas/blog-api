@@ -99,12 +99,39 @@ const deletePost = async (req, res) => {
 	const { id } = req.params;
 
 	try {
+		const post = await prisma.post.findUnique({
+			where: { id: parseInt(id) },
+		});
+
+		if (!post) {
+			return res.status(404).json({ error: "Post not found" });
+		}
+
 		await prisma.post.delete({
 			where: { id: parseInt(id) },
 		});
-		res.json({ message: "Post deleted" });
+		res.status(200).json({ message: "Post deleted successfully" });
 	} catch (error) {
+		console.error("Error deleting post:", error);
 		res.status(500).json({ error: "Failed to delete post" });
+	}
+};
+
+// Publish/unpublish a post
+const togglePublish = async (req, res) => {
+	const { id } = req.params;
+	const { published } = req.body;
+
+	try {
+		const updatedBlogPost = await prisma.post.update({
+			where: { id: parseInt(id)},
+			data: { published },
+		});
+
+		res.json(updatedBlogPost);;
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ error: "Failed to update published status" });
 	}
 };
 
@@ -114,5 +141,6 @@ module.exports = {
 	getPostBySlug, 
 	createPost, 
 	updatePost, 
-	deletePost 
+	deletePost,
+	togglePublish
 };
