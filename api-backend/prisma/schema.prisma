@@ -18,6 +18,7 @@ model User {
   username  String    @unique
   email     String    @unique
   password  String
+  isAdmin   Boolean   @default(false)
   posts     Post[]
   comments  Comment[]
   createdAt DateTime  @default(now())

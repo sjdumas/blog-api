@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function Comments() {
+export default function UserComments() {
 	const [comments, setComments] = useState([]);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(true);
@@ -91,15 +91,15 @@ export default function Comments() {
 		} catch (error) {
 			console.error(error);
 			setError("Error deleting comment");
-		}
-};
+		};
+	};
 
 	if (loading) return <p>Loading comments...</p>
 	if (error) return <p>{error}</p>
 
 	return (
-		<div className="max-w-4xl mx-auto p-4">
-			<h1 className="text-2xl font-bold mb-4">All Comments</h1>
+		<div className="p-4">
+			<h1 className="text-2xl mb-4">All Comments</h1>
 			{comments.length === 0 ? (
 				<p>No comments found.</p>
 				) : (

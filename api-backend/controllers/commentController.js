@@ -1,6 +1,26 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+// Get all comments
+const getAllComments = async (req, res) => {
+	try {
+		const comments = await prisma.comment.findMany({
+			orderBy: { createdAt: "desc" },
+			include: {
+				author: {
+					select: {
+						username: true,
+						email: true,
+					},
+				},
+			},
+		});
+		res.json(comments);
+	} catch (error) {
+		res.status(500).json({ error: "Failed to fetch all comments" });
+	}
+};
+
 // Get all comments for a specific post
 const getCommentsForPost = async (req, res) => {
 	const { postId } = req.params;
@@ -40,7 +60,7 @@ const createComment = async (req, res) => {
 	}
 };
 
-// Edit comment
+// Edit/update comment
 const updateComment = async (req, res) => {
 	const { id } = req.params;
 	const { content } = req.body;
@@ -59,17 +79,21 @@ const updateComment = async (req, res) => {
 			where: { id: userId },
 		});
 
-		// Only allow editing if the username/email match
-		if (comment.email !== user.email) {
-			return res.status(401).json({ error: "You are not authorized to edit this comment." });
+		// Allow if user is admin OR if they are the original author
+		if (!user.isAdmin && comment.email !== user.email) {
+			return res
+				.status(401)
+				.json({ error: "You are not authorized to edit this comment." });
 		}
 
 		const updated = await prisma.comment.update({
 			where: { id: parseInt(id) },
 			data: { content },
 		});
+
 		res.json(updated);
 	} catch (error) {
+		console.error(error);
 		res.status(500).json({ error: "Failed to update comment" });
 	}
 };
@@ -107,6 +131,7 @@ const deleteComment = async (req, res) => {
 };
 
 module.exports = { 
+	getAllComments,
 	getCommentsForPost, 
 	createComment, 
 	updateComment, 

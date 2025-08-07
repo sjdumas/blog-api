@@ -4,7 +4,8 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NewPost from "./pages/NewPost";
 import EditPost from "./pages/EditPost";
-import Comments from "./components/Comments";
+import UserComments from "./pages/UserComments";
+import AdminComments from "./pages/AdminComments";
 
 function App() {
 	return (
@@ -16,7 +17,8 @@ function App() {
 					<Route path="/login" element={<Login />} />
 					<Route path="/posts/new" element={<NewPost />} />
 					<Route path="/posts/:id/edit" element={<EditPost />} />
-					<Route path="/comments" element={<Comments />} />
+					<Route path="/comments" element={<UserComments />} />
+					<Route path="/admin/comments" element={<AdminComments />} />
 				</Routes>
 			</main>
 		</Router>
