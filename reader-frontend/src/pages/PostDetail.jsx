@@ -18,7 +18,7 @@ export default function PostDetail() {
 			try {
 				const response = await fetch(`http://localhost:3000/api/posts/${slug}`);
 				const data = await response.json();
-				
+
 				setPost(data);
 				setComments(data.comments || []);
 			} catch (error) {
@@ -58,7 +58,7 @@ export default function PostDetail() {
 					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({
-					text: commentText,
+					content: commentText,
 					postId: post.id,
 				}),
 			});
@@ -70,7 +70,7 @@ export default function PostDetail() {
 			const newComment = await response.json();
 
 			setSuccessMessage("Your comment was posted!");
-			setTimeout(() => { 
+			setTimeout(() => {
 				setSuccessMessage("");
 			}, 3000); // Clear message after 3 seconds
 
@@ -78,10 +78,7 @@ export default function PostDetail() {
 			setCommentText("");
 
 			// Refresh the comments
-			setPost((prev) => ({
-				...prev,
-				comments: [...prev.comments, newComment],
-			}));
+			setComments((prev) => [...prev, newComment]);
 		} catch (error) {
 			setSubmitError(error.message || "Something went wrong");
 			setErrorMessage("Failed to post comment. Please try again.");
@@ -117,15 +114,15 @@ export default function PostDetail() {
 					<h3 className="text-lg font-semibold mb-2">Comments</h3>
 					{comments.length > 0 ? (
 						<ul className="space-y-4">
-						{comments.map((comment) => (
-							<div key={comment.id} className="mb-4 border-b pb-2">
-								<p className="text-gray-700">{comment.content}</p>
-								<div className="text-xs text-gray-500 mt-1">
-									{comment.author?.username || "Anonymous"} ·{" "}
-									{new Date(comment.createdAt).toLocaleString()}
+							{comments.map((comment) => (
+								<div key={comment.id} className="mb-4 border-b pb-2">
+									<p className="text-gray-700">{comment.content}</p>
+									<div className="text-xs text-gray-500 mt-1">
+										{comment.author?.username || "Anonymous"} ·{" "}
+										{new Date(comment.createdAt).toLocaleString()}
+									</div>
 								</div>
-							</div>
-						))}
+							))}
 						</ul>
 					) : (
 						<p className="text-gray-500">No comments yet.</p>

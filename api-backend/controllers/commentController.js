@@ -1,23 +1,56 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// Get all comments
+// Get paginated comments with optional search & post filter
 const getAllComments = async (req, res) => {
 	try {
-		const comments = await prisma.comment.findMany({
-			orderBy: { createdAt: "desc" },
-			include: {
-				author: {
-					select: {
-						username: true,
-						email: true,
+		// Parse & sanitize query params
+		const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+		const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 10));
+		const q = (req.query.q || "").trim();
+		const postId = req.query.postId ? parseInt(req.query.postId, 10) : null;
+
+		const where = {
+			...(postId ? { postId } : {}),
+			...(q
+				? {
+					OR: [
+						{ content: { contains: q, mode: "insensitive" } },
+						{ username: { contains: q, mode: "insensitive" } },
+						{ email: { contains: q, mode: "insensitive" } },
+						{ author: { username: { contains: q, mode: "insensitive" } } },
+						{ author: { email: { contains: q, mode: "insensitive" } } },
+					],
+				}
+				: {}),
+		};
+
+		// Count + page results (single transaction for consistency)
+		const [total, comments] = await prisma.$transaction([
+			prisma.comment.count({ where }),
+			prisma.comment.findMany({
+				where,
+				orderBy: { createdAt: "desc" },
+				skip: (page - 1) * pageSize,
+				take: pageSize,
+				include: {
+					author: {
+						select: { username: true, email: true },
 					},
 				},
-			},
+			}),
+		]);
+
+		res.json({
+			data: comments,
+			page,
+			pageSize,
+			total,
+			totalPages: Math.max(1, Math.ceil(total / pageSize)),
 		});
-		res.json(comments);
 	} catch (error) {
-		res.status(500).json({ error: "Failed to fetch all comments" });
+		console.error(error);
+		res.status(500).json({ error: "Failed to fetch comments" });
 	}
 };
 
@@ -28,7 +61,7 @@ const getCommentsForPost = async (req, res) => {
 	try {
 		const comments = await prisma.comment.findMany({
 			where: { postId: parseInt(postId) },
-			orderBy: { createdAt: "desc"},
+			orderBy: { createdAt: "desc" },
 		});
 		res.json(comments);
 	} catch (error) {
@@ -52,6 +85,11 @@ const createComment = async (req, res) => {
 				username: user.username,
 				email: user.email,
 				postId,
+			},
+			include: {
+				author: {
+					select: { username: true, email: true },
+				}
 			},
 		});
 		res.status(201).json(newComment);
@@ -89,6 +127,11 @@ const updateComment = async (req, res) => {
 		const updated = await prisma.comment.update({
 			where: { id: parseInt(id) },
 			data: { content },
+			include: {
+				author: {
+					select: { username: true, email: true }
+				}
+			},
 		});
 
 		res.json(updated);
@@ -116,8 +159,8 @@ const deleteComment = async (req, res) => {
 			where: { id: userId },
 		});
 
-		// Only allow deletion if the username/email match
-		if (comment.email !== user.email) {
+		// Allow if user is admin OR if they are the original author
+		if (!user.isAdmin && comment.email !== user.email) {
 			return res.status(403).json({ error: "You are not authorized to delete this comment." });
 		}
 
@@ -130,10 +173,21 @@ const deleteComment = async (req, res) => {
 	}
 };
 
-module.exports = { 
+// Get comments stats for Admin Dashboard
+const getCommentStats = async (req, res, next) => {
+	try {
+		const total = await prisma.comment.count();
+		res.json({ total });
+	} catch (error) {
+		next(error);
+	}
+};
+
+module.exports = {
 	getAllComments,
-	getCommentsForPost, 
-	createComment, 
-	updateComment, 
-	deleteComment 
+	getCommentsForPost,
+	createComment,
+	updateComment,
+	deleteComment,
+	getCommentStats
 };

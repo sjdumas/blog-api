@@ -2,7 +2,7 @@
 
 html,
 body {
-	@apply bg-gray-50;
+	@apply bg-white;
 }
 
 h1,
@@ -15,5 +15,19 @@ h6 {
 }
 
 button {
-	@apply cursor-pointer;
+	@apply cursor-pointer font-semibold;
+}
+
+.pagination-button {
+	@apply disabled:cursor-not-allowed border-gray-400 hover:border-black;
+}
+
+.nav-link {
+	@apply hover:text-gray-200;
+}
+
+.post-filter,
+.search-bar,
+.page-select {
+	@apply border-gray-400 h-10;
 }

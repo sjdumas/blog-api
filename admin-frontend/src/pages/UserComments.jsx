@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { API_BASE } from "../lib/api";
+import { authHeaders, clearAuth, getUser } from "../lib/auth";
+import Button from "../components/Button";
 
 export default function UserComments() {
 	const [comments, setComments] = useState([]);
@@ -7,145 +10,172 @@ export default function UserComments() {
 	const [editingCommentId, setEditingCommentId] = useState(null);
 	const [editedContent, setEditedContent] = useState("");
 
-	const [user, setUser] = useState(() => {
-		try {
-			return JSON.parse(localStorage.getItem("user"));
-		} catch {
-			return null;
-		}
-	});
+	const user = getUser();
 
 	useEffect(() => {
+		const controller = new AbortController();
+
 		const fetchComments = async () => {
+			setError("");
+			setLoading(true);
 			try {
-				const res = await fetch("http://localhost:3000/api/comments", {
-					headers: {
-						Authorization: `Bearer ${localStorage.getItem("token")}`,
-					},
+				const params = new URLSearchParams({ page: "1", pageSize: "1000" });
+				const res = await fetch(`${API_BASE}/api/comments?${params.toString()}`, {
+					headers: authHeaders(),
+					signal: controller.signal,
 				});
 
-				if (!res.ok) throw new Error("Failed to fetch comments");
+				if (res.status === 401) {
+					clearAuth();
+					window.location.assign("/login");
+					return;
+				}
 
-				const data = await res.json();
-				setComments(data);
-			} catch (error) {
-				console.error(error);
-				setError("Error fetching comments");
+				const json = await res.json().catch(() => ({}));
+				if (!res.ok) throw new Error(json?.error || `Failed to fetch comments (${res.status})`);
+
+				const list = Array.isArray(json) ? json : json.data || [];
+				const email = user?.email?.toLowerCase();
+
+				const mine = email
+					? list.filter((c) => (c.author?.email || c.email || "").toLowerCase() === email)
+					: list;
+
+				setComments(mine);
+			} catch (err) {
+				if (err.name !== "AbortError") {
+					console.error(err);
+					setError(err.message || "Error fetching comments");
+				}
 			} finally {
 				setLoading(false);
 			}
 		};
 
 		fetchComments();
-	}, []);
+		return () => controller.abort();
+	}, [user?.email]);
 
-	const handleEditClick = (comment) => {
+	const startEdit = (comment) => {
 		setEditingCommentId(comment.id);
-		setEditedContent(comment.content);
+		setEditedContent(comment.content || "");
 	};
 
-	const handleCancelEdit = () => {
+	const cancelEdit = () => {
 		setEditingCommentId(null);
 		setEditedContent("");
 	};
 
-	const handleEdit = async (comment) => {
+	const saveEdit = async (commentId) => {
 		try {
-			const res = await fetch(`http://localhost:3000/api/comments/${comment.id}`, {
+			const res = await fetch(`${API_BASE}/api/comments/${commentId}`, {
 				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${localStorage.getItem("token")}`,
-				},
+				headers: authHeaders({ "Content-Type": "application/json" }),
 				body: JSON.stringify({ content: editedContent }),
 			});
 
-			if (!res.ok) throw new Error("Failed to update comment");
+			if (res.status === 401) {
+				clearAuth();
+				window.location.assign("/login");
+				return;
+			}
 
-			const updatedComment = await res.json();
+			const updated = await res.json().catch(() => ({}));
+			if (!res.ok) throw new Error(updated?.error || `Failed to update comment (${res.status})`);
 
 			setComments((prev) =>
-				prev.map((c) => (c.id === updatedComment.id ? updatedComment : c))
+				prev.map((c) => (c.id === commentId ? { ...updated, author: c.author ?? updated.author } : c))
 			);
-
-			setEditingCommentId(null);
-			setEditedContent("");
-		} catch (error) {
-			console.error(error);
-			setError("Error updating comment");
+			cancelEdit();
+		} catch (err) {
+			console.error(err);
+			setError(err.message || "Error updating comment");
 		}
 	};
 
-	const handleDelete = async (id) => {
+	const remove = async (id) => {
 		try {
-			const res = await fetch(`http://localhost:3000/api/comments/${id}`, {
+			const res = await fetch(`${API_BASE}/api/comments/${id}`, {
 				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${localStorage.getItem("token")}`,
-				},
+				headers: authHeaders(),
 			});
 
-			if (!res.ok) throw new Error("Failed to delete comment");
+			if (res.status === 401) {
+				clearAuth();
+				window.location.assign("/login");
+				return;
+			}
+
+			if (!res.ok) {
+				let msg = "Failed to delete comment";
+				try {
+					const data = await res.json();
+					if (data?.error) msg = data.error;
+				} catch { }
+				throw new Error(msg);
+			}
 
 			setComments((prev) => prev.filter((c) => c.id !== id));
-		} catch (error) {
-			console.error(error);
-			setError("Error deleting comment");
-		};
+		} catch (err) {
+			console.error(err);
+			setError(err.message || "Error deleting comment");
+		}
 	};
 
-	if (loading) return <p>Loading comments...</p>
-	if (error) return <p>{error}</p>
+	if (loading) return <p>Loading comments...</p>;
 
 	return (
 		<div className="p-4">
-			<h1 className="text-2xl mb-4">All Comments</h1>
+			<h1 className="text-2xl mb-4">My Comments</h1>
+
+			{error && <p className="text-red-600 mb-3">{error}</p>}
+
 			{comments.length === 0 ? (
 				<p>No comments found.</p>
-				) : (
+			) : (
 				<ul className="space-y-4">
-					{comments.map((comment) => (
-						<div key={comment.id} className="comment border-b py-2">
-							{editingCommentId === comment.id ? (
-								<div className="space-y-2">
-									<textarea
-										className="w-full border p-2 rounded"
-										value={editedContent}
-										onChange={(e) => setEditedContent(e.target.value)}
-									/>
-									<div className="space-x-2">
-										<button onClick={() => handleEdit(comment)} className="text-green-500 hover:underline">
-											Save
-										</button>
-										<button onClick={handleCancelEdit} className="text-gray-500 hover:underline">
-											Cancel
-										</button>
-									</div>
-								</div>
-							) : (
-								<p>{comment.content}</p>
-							)}
-							<p className="text-sm text-gray-500">— {comment.author?.email}</p>
+					{comments.map((comment) => {
+						const isEditing = editingCommentId === comment.id;
+						const unchanged = editedContent.trim() === (comment.content || "").trim();
+						const invalid = editedContent.trim().length === 0;
 
-							{/* Only show buttons if logged-in user is the comment author */}
-							{user?.email === comment.author?.email && (
-							<div className="mt-1 space-x-2">
-								<button
-									onClick={() => handleEdit(comment)}
-									className="text-blue-500 hover:underline"
-								>
-									Edit
-								</button>
-								<button
-									onClick={() => handleDelete(comment.id)}
-									className="text-red-500 hover:underline"
-								>
-									Delete
-								</button>
-							</div>
-							)}
-						</div>
-					))}
+						return (
+							<li key={comment.id} className="border-b py-3">
+								{isEditing ? (
+									<div className="space-y-2">
+										<textarea
+											className="w-full border p-2 rounded"
+											value={editedContent}
+											onChange={(e) => setEditedContent(e.target.value)}
+										/>
+										<div className="space-x-2">
+											<Button onClick={() => saveEdit(comment.id)} disabled={invalid || unchanged} buttonType="small">
+												Save
+											</Button>
+											<Button onClick={cancelEdit} variant="outline" buttonType="small">
+												Cancel
+											</Button>
+										</div>
+									</div>
+								) : (
+									<>
+										<p>{comment.content}</p>
+										<p className="text-sm text-gray-500">
+											— {comment.author?.email || comment.email}
+										</p>
+										<div className="my-3 space-x-2">
+											<Button onClick={() => startEdit(comment)} variant="outline" buttonType="small">
+												Edit
+											</Button>
+											<Button onClick={() => remove(comment.id)} variant="warning" buttonType="small">
+												Delete
+											</Button>
+										</div>
+									</>
+								)}
+							</li>
+						);
+					})}
 				</ul>
 			)}
 		</div>

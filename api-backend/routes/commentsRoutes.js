@@ -4,6 +4,7 @@ const commentController = require("../controllers/commentController");
 const verifyToken = require("../middleware/authMiddleware");
 
 // Public route
+router.get("/stats", commentController.getCommentStats);
 router.get("/", commentController.getAllComments);
 router.get("/:postId", commentController.getCommentsForPost);
 
