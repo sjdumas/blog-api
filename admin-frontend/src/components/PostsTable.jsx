@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { API_BASE } from "../lib/api";
 import { authHeaders, clearAuth } from "../lib/auth";
+import { Link } from "react-router-dom";
 import FormField from "./FormField";
 import Button from "./Button";
 
@@ -94,7 +95,9 @@ export default function PostsTable({
 				headers: authHeaders({ "Content-Type": "application/json" }),
 			});
 			if (!res.ok) throw new Error("Failed to publish");
-			setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, status: "PUBLISHED", publishedAt: new Date().toISOString() } : p)));
+			setPosts((prev) =>
+				prev.map((p) => (p.id === id ? { ...p, status: "PUBLISHED", publishedAt: new Date().toISOString() } : p))
+			);
 			toast.success("Post published", { id: tId });
 		} catch (error) {
 			toast.error(error.message || "Could not publish", { id: tId });
@@ -109,10 +112,28 @@ export default function PostsTable({
 				headers: authHeaders({ "Content-Type": "application/json" }),
 			});
 			if (!res.ok) throw new Error("Failed to unpublish");
-			setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, status: "DRAFT", publishedAt: null } : p)));
+			setPosts((prev) =>
+				prev.map((p) => (p.id === id ? { ...p, status: "DRAFT", publishedAt: null } : p))
+			);
 			toast.success("Post unpublished", { id: tId });
 		} catch (error) {
 			toast.error(error.message || "Could not unpublish", { id: tId });
+		}
+	};
+
+	const deletePost = async (id) => {
+		if (!window.confirm("Are you sure you want to delete this post?")) return;
+		const tId = toast.loading("Deleting…");
+		try {
+			const res = await fetch(`${API_BASE}/api/posts/${id}`, {
+				method: "DELETE",
+				headers: authHeaders(),
+			});
+			if (!res.ok) throw new Error("Failed to delete");
+			setPosts((prev) => prev.filter((p) => p.id !== id));
+			toast.success("Post deleted", { id: tId });
+		} catch (error) {
+			toast.error(error.message || "Could not delete", { id: tId });
 		}
 	};
 
@@ -127,17 +148,15 @@ export default function PostsTable({
 						<p className="text-sm text-gray-500">{total} total</p>
 					</div>
 					<div className="flex flex-col sm:flex-row gap-3">
-						<FormField
-							name="search"
-							value={q}
-							placeholder="Search title/content…"
-							onChange={(e) => setQ(e.target.value)}
-						/>
+						<FormField name="search" value={q} placeholder="Search title/content…" onChange={(e) => setQ(e.target.value)} />
 						<FormField
 							name="status"
 							as="select"
 							value={status}
-							onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+							onChange={(e) => {
+								setStatus(e.target.value);
+								setPage(1);
+							}}
 							options={[
 								{ value: "ALL", label: "All" },
 								{ value: "DRAFT", label: "Draft" },
@@ -148,7 +167,10 @@ export default function PostsTable({
 							name="pageSize"
 							as="select"
 							value={pageSize}
-							onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+							onChange={(e) => {
+								setPageSize(Number(e.target.value));
+								setPage(1);
+							}}
 							options={PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: `${n} / page` }))}
 						/>
 					</div>
@@ -170,38 +192,54 @@ export default function PostsTable({
 					<tbody>
 						{loading && (
 							<tr>
-								<td colSpan={6} className="p-3 italic text-gray-500">Loading…</td>
+								<td colSpan={6} className="p-3 italic text-gray-500">
+									Loading…
+								</td>
 							</tr>
 						)}
 						{!loading && filteredRows.length === 0 && (
 							<tr>
-								<td colSpan={6} className="p-3 italic text-gray-500">No posts found.</td>
+								<td colSpan={6} className="p-3 italic text-gray-500">
+									No posts found.
+								</td>
 							</tr>
 						)}
-						{!loading && filteredRows.map((p) => (
-							<tr key={p.id} className="border-t border-t-gray-300">
-								<td className="p-3">
-									<div className="font-medium">{p.title}</div>
-									<div className="text-xs text-gray-500 truncate max-w-[28rem]">{p.slug}</div>
-								</td>
-								<td className="p-3">
-									<span className={`px-2 py-1 rounded-full text-xs ${p.status === "PUBLISHED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-										{p.status}
-									</span>
-								</td>
-								<td className="p-3">{p.author?.username ?? "—"}</td>
-								<td className="p-3">{formatDate(p.createdAt)}</td>
-								<td className="p-3">{formatDate(p.publishedAt)}</td>
-								<td className="p-3">
-									<div className="flex justify-end gap-2">
-										{p.status === "DRAFT"
-											? <Button onClick={() => publish(p.id)} buttonType="small">Publish</Button>
-											: <Button variant="outline" onClick={() => unpublish(p.id)} buttonType="small">Unpublish</Button>
-										}
-									</div>
-								</td>
-							</tr>
-						))}
+						{!loading &&
+							filteredRows.map((p) => (
+								<tr key={p.id} className="border-t border-t-gray-300">
+									<td className="p-3">
+										<div className="font-medium">{p.title}</div>
+										<div className="text-xs text-gray-500 truncate max-w-[28rem]">{p.slug}</div>
+									</td>
+									<td className="p-3">
+										<span className={`px-2 py-1 rounded-full text-xs ${p.status === "PUBLISHED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+											{p.status}
+										</span>
+									</td>
+									<td className="p-3">{p.author?.username ?? "—"}</td>
+									<td className="p-3">{formatDate(p.createdAt)}</td>
+									<td className="p-3">{formatDate(p.publishedAt)}</td>
+									<td className="p-3 whitespace-nowrap">
+										<div className="flex justify-end gap-2">
+											{p.status === "DRAFT" ? (
+												<Button onClick={() => publish(p.id)} buttonType="small">
+													Publish
+												</Button>
+											) : (
+												<Button variant="outline" onClick={() => unpublish(p.id)} buttonType="small">
+													Unpublish
+												</Button>
+											)}
+											<Link to={`/posts/${p.id}/edit`} className="px-3 py-1 rounded focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed !mt-0 bg-white border border-black text-black hover:bg-black hover:text-white font-semibold">
+												Edit
+											</Link>
+											<Button variant="warning" buttonType="small" onClick={() => deletePost(p.id)}>
+												Delete
+											</Button>
+										</div>
+									</td>
+								</tr>
+							))}
 					</tbody>
 				</table>
 			</div>
@@ -212,12 +250,7 @@ export default function PostsTable({
 						Page {page} of {Math.max(1, Math.ceil(total / pageSize))}
 					</div>
 					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							buttonType="small"
-							disabled={page <= 1}
-							onClick={() => setPage((p) => Math.max(1, p - 1))}
-						>
+						<Button variant="outline" buttonType="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
 							Prev
 						</Button>
 						<Button

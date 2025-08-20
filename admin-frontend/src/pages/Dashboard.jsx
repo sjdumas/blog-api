@@ -29,8 +29,8 @@ export default function Dashboard() {
 						totalComments: commentStats?.total ?? 0,
 					});
 				}
-			} catch (err) {
-				console.error("Failed to fetch dashboard stats:", err);
+			} catch (error) {
+				console.error("Failed to fetch dashboard stats:", error);
 				// Render anyway with defaults
 			}
 		}
@@ -44,16 +44,14 @@ export default function Dashboard() {
 
 	return (
 		<div className="p-4 space-y-6">
-			<h1 className="text-2xl mb-2">Dashboard</h1>
-			<p className="text-lg mb-4">This is the area for administrators to manage blog posts.</p>
+			<h1 className="text-2xl mb-6">Dashboard</h1>
 			<div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
 				<DashboardStat title="Total Posts" value={stats.totalPosts} />
 				<DashboardStat title="Draft Posts" value={stats.draftPosts} />
 				<DashboardStat title="Published Posts" value={stats.publishedPosts} />
 				<DashboardStat title="Total Comments" value={stats.totalComments} />
 			</div>
-			<section>
-				<h2 className="text-lg font-medium mb-2">Recent Posts</h2>
+			<section className="mt-8">
 				<PostsTable />
 			</section>
 		</div>

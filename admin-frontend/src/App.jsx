@@ -47,6 +47,9 @@ function AppRoutes() {
 				document.title = "All Posts | Admin";
 				break;
 			case "/admin/comments":
+				document.title = "Moderate Comments | Admin";
+				break;
+			case "/comments":
 				document.title = "Comments | Admin";
 				break;
 			default:
@@ -60,7 +63,7 @@ function AppRoutes() {
 				<Navbar />
 			</header>
 
-			<main className="flex-1 p-4">
+			<main className="flex-1 py-6 px-4">
 				<Routes>
 					<Route
 						path="/"

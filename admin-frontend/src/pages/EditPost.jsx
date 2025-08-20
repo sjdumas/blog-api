@@ -1,89 +1,149 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { API_BASE } from "../lib/api";
-import { authHeaders } from "../lib/auth";
+import { useNavigate, useParams } from "react-router-dom";
+import { authFetch } from "../lib/api";
+import Button from "../components/Button";
+import FormField from "../components/FormField";
+import TextArea from "../components/TextArea";
 
 export default function EditPost() {
 	const { id } = useParams();
 	const navigate = useNavigate();
+
 	const [title, setTitle] = useState("");
+	const [slug, setSlug] = useState("");
+	const [excerpt, setExcerpt] = useState("");
 	const [content, setContent] = useState("");
-	const [loading, setLoading] = useState(true);
 	const [err, setErr] = useState("");
+	const [fieldErrors, setFieldErrors] = useState({});
+	const [loading, setLoading] = useState(true);
+	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
-		const fetchPost = async () => {
-			setErr("");
-			setLoading(true);
+		(async () => {
 			try {
-				// NOTE: protected ID route requires Authorization
-				const res = await fetch(`${API_BASE}/api/posts/id/${id}`, {
-					headers: authHeaders(),
-				});
-				const data = await res.json().catch(() => ({}));
-				if (!res.ok) throw new Error(data?.error || `Failed to load post (${res.status})`);
-
+				const data = await authFetch(`/api/posts/id/${id}`);
 				setTitle(data.title || "");
+				setSlug(data.slug || "");
+				setExcerpt(data.excerpt || "");
 				setContent(data.content || "");
-			} catch (error) {
-				console.error("Error fetching post", error);
-				setErr(error.message || "Error fetching post");
+			} catch (e) {
+				console.error(e);
+				setErr(e.message || "Error loading post");
 			} finally {
 				setLoading(false);
 			}
-		};
-
-		fetchPost();
+		})();
 	}, [id]);
 
-	const handleSubmit = async (e) => {
+	const autoSlug = () => {
+		if (!title.trim()) return;
+
+		const s = title
+			.toLowerCase()
+			.replace(/[^a-z0-9\s-]/g, "")
+			.trim()
+			.replace(/\s+/g, "-")
+			.replace(/-+/g, "-");
+		setSlug(s);
+	};
+
+	const onSubmit = async (e) => {
 		e.preventDefault();
 		setErr("");
+		setFieldErrors({});
+		setSaving(true);
+
 		try {
-			const res = await fetch(`${API_BASE}/api/posts/${id}`, {
+			await authFetch(`/api/posts/${id}`, {
 				method: "PUT",
-				headers: authHeaders({ "Content-Type": "application/json" }),
-				body: JSON.stringify({ title, content }),
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ title, slug, excerpt, content }),
 			});
-
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.error || `Failed to update post (${res.status})`);
-
-			// Go back to the admin posts list
 			navigate("/admin/posts", { replace: true });
 		} catch (error) {
 			console.error(error);
+			
+			if (error?.details?.length) {
+				const fe = {};
+				for (const d of error.details) {
+					if (d?.param && d?.msg) fe[d.param] = d.msg;
+				}
+				setFieldErrors(fe);
+			}
 			setErr(error.message || "Error updating post");
+		} finally {
+			setSaving(false);
 		}
 	};
 
-	if (loading) return <p>Loading...</p>;
+	if (loading) return <p>Loading…</p>;
 
 	return (
 		<div className="max-w-2xl mx-auto mt-10">
 			<h2 className="text-2xl font-bold mb-4">Edit Post</h2>
 			{err && <p className="text-red-600 mb-3">{err}</p>}
-			<form onSubmit={handleSubmit} className="space-y-4">
-				<input
-					type="text"
-					className="w-full border px-3 py-2"
+
+			<form onSubmit={onSubmit} className="space-y-3">
+				<FormField
+					label="Title"
+					name="title"
 					value={title}
 					onChange={(e) => setTitle(e.target.value)}
+					onBlur={autoSlug}
 					required
+					error={fieldErrors.title}
 				/>
-				<textarea
-					className="w-full border px-3 py-2"
-					rows="8"
+
+				<div>
+					<div className="grid grid-cols-12 gap-3 items-center">
+						<div className="col-span-10">
+							<FormField
+								label="Slug"
+								name="slug"
+								placeholder="kebab-case-slug"
+								value={slug}
+								onChange={(e) => setSlug(e.target.value)}
+								required
+								error={fieldErrors.slug}
+							/>
+						</div>
+						<div className="col-span-2 w-full md:w-auto">
+							<Button type="button" className="!mt-3" variant="outline" onClick={autoSlug}>
+								Auto
+							</Button>
+						</div>
+					</div>
+					<p className="text-xs text-gray-500 mt-1">
+						lowercase letters, numbers, and dashes only
+					</p>
+				</div>
+
+				<FormField
+					label="Excerpt (optional)"
+					name="excerpt"
+					value={excerpt}
+					onChange={(e) => setExcerpt(e.target.value)}
+					maxLength={300}
+					error={fieldErrors.excerpt}
+				/>
+
+				<TextArea
+					label="Content"
+					name="content"
 					value={content}
 					onChange={(e) => setContent(e.target.value)}
 					required
+					error={fieldErrors.content}
 				/>
-				<button
-					type="submit"
-					className="bg-blue-600 text-white px-4 py-2 rounded"
-				>
-					Update Post
-				</button>
+
+				<div className="flex gap-3">
+					<Button type="submit" disabled={saving}>
+						{saving ? "Saving…" : "Save Changes"}
+					</Button>
+					<Button type="button" variant="outline" onClick={() => navigate(-1)}>
+						Cancel
+					</Button>
+				</div>
 			</form>
 		</div>
 	);

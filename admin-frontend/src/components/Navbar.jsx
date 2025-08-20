@@ -32,7 +32,7 @@ export default function Navbar() {
 	}
 
 	return (
-		<nav className="bg-gray-800 text-white p-4">
+		<nav className="bg-gray-800 text-white py-4 px-8">
 			<div className="flex justify-between items-center">
 				<div className="flex items-center space-x-4">
 					{user?.isAdmin ? (

@@ -1,50 +1,52 @@
-import { clearAuth } from "./auth";
+import { authHeaders, clearAuth } from "./auth";
 
-// Base URL for your backend API
 export const API_BASE =
-	import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+	import.meta?.env?.VITE_API_URL ||
+	(typeof process !== "undefined" && process?.env?.REACT_APP_API_URL) ||
+	"";
 
 /**
- * Wrapper around fetch to include auth token and timeout
+ * Public fetch: no auth injection. Throws an Error on failure.
  */
-export async function authFetch(endpoint, options = {}) {
-	const token = localStorage.getItem("token");
+export async function apiFetch(path, options = {}) {
+	const res = await fetch(`${API_BASE}${path}`, options);
+	const data = await res.json().catch(() => ({}));
 
-	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 8000); // abort after 8s
-
-	const config = {
-		...options,
-		headers: {
-			"Content-Type": "application/json",
-			...(token && { Authorization: `Bearer ${token}` }),
-			...(options.headers || {}),
-		},
-		signal: controller.signal,
-	};
-
-	try {
-		// Allow absolute URLs or relative endpoints
-		const url = endpoint.startsWith("http")
-			? endpoint
-			: `${API_BASE}${endpoint}`;
-
-		const res = await fetch(url, config);
-		clearTimeout(timeoutId);
-
-		if (!res.ok) {
-			// Automatically logout on invalid token / expired login
-			if (res.status === 401) {
-				clearAuth();
-				window.location.href = "/login";
-				return;
-			}
-			throw new Error(`Request failed with status ${res.status}`);
-		}
-
-		return await res.json();
-	} catch (error) {
-		console.error("authFetch error:", error.message);
-		throw error;
+	if (!res.ok) {
+		throw {
+			message: data?.error || `Request failed (${res.status})`,
+			status: res.status,
+			details: data?.details,
+		};
 	}
+	return data;
+};
+
+/**
+ * Authenticated fetch: injects Authorization + handles 401 + exposes per-field backend errors.
+ * Throws: { message, status, details }
+ */
+export async function authFetch(path, options = {}) {
+	const res = await fetch(`${API_BASE}${path}`, {
+		...options,
+		headers: authHeaders(options.headers || {}),
+	});
+
+	if (res.status === 401) {
+		clearAuth();
+		window.location.assign("/login");
+		
+		return new Promise(() => { });
+	}
+
+	const data = await res.json().catch(() => ({}));
+
+	if (!res.ok) {
+		throw {
+			message: data?.error || `Request failed (${res.status})`,
+			status: res.status,
+			details: data?.details,
+		};
+	}
+	return data;
 };

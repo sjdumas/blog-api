@@ -91,21 +91,24 @@ export default function NewPost() {
 				/>
 
 				<div>
-					<div className="flex gap-2 items-center">
-						<FormField
-							label="Slug"
-							name="slug"
-							placeholder="kebab-case-slug"
-							value={slug}
-							onChange={(e) => setSlug(e.target.value)}
-							onBlur={autoSlug}
-							required
-							error={fieldErrors.slug}
-							className="flex-1"
-						/>
-						<Button type="button" className="!mt-3" variant="outline" onClick={autoSlug}>
-							Auto
-						</Button>
+					<div className="grid grid-cols-12 gap-3 items-center">
+						<div className="col-span-10">
+							<FormField
+								label="Slug"
+								name="slug"
+								placeholder="kebab-case-slug"
+								value={slug}
+								onChange={(e) => setSlug(e.target.value)}
+								onBlur={autoSlug}
+								required
+								error={fieldErrors.slug}
+							/>
+						</div>
+						<div className="col-span-2 w-full md:w-auto">							
+							<Button type="button" className="!mt-3" variant="outline" onClick={autoSlug}>
+								Auto
+							</Button>
+						</div>
 					</div>
 					<p className="text-xs text-gray-500 mt-1">
 						lowercase letters, numbers, and dashes only
