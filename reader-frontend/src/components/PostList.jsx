@@ -6,10 +6,11 @@ export default function PostList({ posts }) {
 	return (
 		<ul>
 			{posts.map((post) =>(
-				<li key={post.id} style={{ marginBottom: "1.5rem" }}>
-					<h2>{post.title}</h2>
+				<li key={post.id}>
+					<h2>
+						<Link to={`/posts/${post.slug}`}>{post.title}</Link>
+					</h2>
 					<p>{post.excerpt}</p>
-					<Link to={`/posts/${post.slug}`}>{post.title}</Link>
 				</li>
 			))}
 		</ul>

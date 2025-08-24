@@ -11,6 +11,64 @@ function mapPrismaError(err) {
 	return null;
 }
 
+// Always return PUBLISHED only, sorted by publishedAt when available
+// GET /api/posts/public
+// Public-only list. Always returns PUBLISHED posts with pagination + optional search.
+const getPublicPosts = async (req, res) => {
+	try {
+		const page = Math.max(1, parseInt(req.query.page) || 1);
+		const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize) || 10));
+		const q = (req.query.q || "").trim();
+
+		const where = {
+			status: "PUBLISHED",
+			...(q
+				? {
+					OR: [
+						{ title: { contains: q, mode: "insensitive" } },
+						{ excerpt: { contains: q, mode: "insensitive" } },
+						{ content: { contains: q, mode: "insensitive" } },
+						{ author: { username: { contains: q, mode: "insensitive" } } },
+					],
+				}
+				: {}),
+		};
+
+		const [total, posts] = await prisma.$transaction([
+			prisma.post.count({ where }),
+			prisma.post.findMany({
+				where,
+				orderBy: [
+					{ publishedAt: "desc" }, // newest published first
+					{ createdAt: "desc" },   // fallback for older drafts later published
+				],
+				skip: (page - 1) * pageSize,
+				take: pageSize,
+				select: {
+					id: true,
+					slug: true,
+					title: true,
+					excerpt: true,
+					publishedAt: true,
+					createdAt: true,
+					author: { select: { username: true } },
+				},
+			}),
+		]);
+
+		res.json({
+			data: posts,
+			page,
+			pageSize,
+			total,
+			totalPages: Math.max(1, Math.ceil(total / pageSize)),
+		});
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ error: "Failed to fetch public posts" });
+	}
+};
+
 // GET /api/posts?status=PUBLISHED|DRAFT&page=&pageSize=&q=
 const getAllPosts = async (req, res) => {
 	try {
@@ -232,6 +290,7 @@ const unpublishPost = async (req, res) => {
 
 module.exports = {
 	getAllPosts,
+	getPublicPosts,
 	getManagePosts,
 	getPostById,
 	getPostBySlug,

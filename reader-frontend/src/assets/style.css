@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+html,
+body {
+	@apply bg-white;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	@apply font-semibold text-slate-900;
+}
+
+p {
+	@apply my-4;
+}
+
+li {
+	@apply my-1;
+}
+
+button {
+	@apply cursor-pointer font-semibold;
+}
+
+.pagination-button {
+	@apply disabled:cursor-not-allowed border-gray-400 hover:border-black;
+}
+
+.nav-link {
+	@apply hover:text-gray-200;
+}
+
+.post-filter,
+.search-bar,
+.page-select {
+	@apply border-gray-400 h-10;
+}

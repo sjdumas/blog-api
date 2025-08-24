@@ -81,6 +81,7 @@ router.get("/stats", verifyToken, adminOnly, async (req, res) => {
 
 // -------------------------- PUBLIC ROUTES ---------------------------
 router.get("/", postController.getAllPosts);
+router.get("/public", postController.getPublicPosts);
 
 // Slug route must come AFTER /id, /manage, /stats
 router.get("/:slug", postController.getPostBySlug);
